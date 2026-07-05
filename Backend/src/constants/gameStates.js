@@ -1,0 +1,7 @@
+export const GAME_STATES = {
+    LOBBY: "LOBBY",
+    WORD_SELECTION: "WORD_SELECTION",
+    DRAWING: "DRAWING",
+    ROUND_END: "ROUND_END",
+    GAME_OVER: "GAME_OVER",
+};

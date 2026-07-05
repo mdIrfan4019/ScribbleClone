@@ -1,0 +1,22 @@
+[
+    {
+        "word":"Apple",
+        "category":"Objects"
+    },
+    {
+        "word":"Elephant",
+        "category":"Animals"
+    },
+    {
+        "word":"Laptop",
+        "category":"Objects"
+    },
+    {
+        "word":"Football",
+        "category":"Sports"
+    },
+    {
+        "word":"Doctor",
+        "category":"Profession"
+    }
+]
