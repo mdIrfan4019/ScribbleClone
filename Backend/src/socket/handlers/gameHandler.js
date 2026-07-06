@@ -17,7 +17,6 @@ export function startWordSelection(room, io) {
 
         // Ensure drawing is stopped and room state is WORD_SELECTION
         room.changeState(GAME_STATES.WORD_SELECTION);
-        room.resetRound();
         room.generateWordOptions();
 
         // Broadcast current room state to everyone

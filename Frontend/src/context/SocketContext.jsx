@@ -157,6 +157,7 @@ export function SocketProvider({ children }) {
 
     socket.on("word_chosen", ({ drawerId, category, length, room }) => {
       setRoomState(room);
+      setPlayers(room.players);
       setCategory(category);
       setWordLength(length);
       setWordOptions([]);

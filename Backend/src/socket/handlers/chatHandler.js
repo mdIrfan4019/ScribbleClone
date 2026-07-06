@@ -121,8 +121,19 @@ export default function chatHandler(io, socket) {
                 io.to(room.roomId).emit("room_state", { room: room.toJSON() });
 
                 // Check if all guessers have guessed correctly
-                const totalGuessersCount = room.getPlayers().filter(p => p.connected && !p.isDrawer).length;
-                const correctGuessersCount = room.getPlayers().filter(p => p.connected && !p.isDrawer && p.hasGuessedCorrectly).length;
+                // Check if all guessers have guessed correctly (bulletproof check)
+                const activeDrawer = room.getCurrentDrawer();
+                const guessers = room.getPlayers().filter(p => !activeDrawer || p.playerId !== activeDrawer.playerId);
+                const totalGuessersCount = guessers.length;
+                const correctGuessersCount = guessers.filter(p => p.hasGuessedCorrectly).length;
+
+                console.log("=== DEBUG GAME LOOP STATE ===");
+                console.log("Room ID:", room.roomId);
+                console.log("Players:", room.getPlayers().map(p => p.username));
+                console.log("Drawer:", activeDrawer?.username);
+                console.log("totalGuessersCount:", totalGuessersCount);
+                console.log("correctGuessersCount:", correctGuessersCount);
+                console.log("=============================");
 
                 if (correctGuessersCount === totalGuessersCount && totalGuessersCount > 0) {
                     handleRoundEnd(room, io, "Everyone guessed the word!");
