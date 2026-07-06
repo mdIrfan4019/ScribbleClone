@@ -28,9 +28,9 @@ class Timer {
 
         if (this.isRunning) return;
 
-        this.onTick = onTick;
+        if (onTick !== null) this.onTick = onTick;
 
-        this.onComplete = onComplete;
+        if (onComplete !== null) this.onComplete = onComplete;
 
         this.isRunning = true;
 

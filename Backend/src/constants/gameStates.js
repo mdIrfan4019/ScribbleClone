@@ -1,7 +1,7 @@
-export const GAME_STATES = {
+export const GAME_STATES = Object.freeze({
     LOBBY: "LOBBY",
     WORD_SELECTION: "WORD_SELECTION",
     DRAWING: "DRAWING",
     ROUND_END: "ROUND_END",
-    GAME_OVER: "GAME_OVER",
-};
+    GAME_OVER: "GAME_OVER"
+});

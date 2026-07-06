@@ -1,4 +1,4 @@
-export const ROOM_TYPES = {
+export const ROOM_TYPES = Object.freeze({
     PUBLIC: "PUBLIC",
-    PRIVATE: "PRIVATE",
-};
+    PRIVATE: "PRIVATE"
+});

@@ -129,7 +129,7 @@ class GameManager {
 
                 !room.isFull() &&
 
-                room.state === GAME_STATES.LOBBY
+                room.state !== GAME_STATES.GAME_OVER
 
             ) {
 

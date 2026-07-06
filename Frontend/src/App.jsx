@@ -1,122 +1,103 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { SocketProvider, useSocket } from "./context/SocketContext.jsx";
+import LobbySelect from "./components/LobbySelect.jsx";
+import WaitingLobby from "./components/WaitingLobby.jsx";
+import LeaderboardSidebar from "./components/LeaderboardSidebar.jsx";
+import CanvasBoard from "./components/CanvasBoard.jsx";
+import ChatPanel from "./components/ChatPanel.jsx";
+import WordSelectionModal from "./components/Modals/WordSelectionModal.jsx";
+import RoundEndModal from "./components/Modals/RoundEndModal.jsx";
+import GameOverModal from "./components/Modals/GameOverModal.jsx";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+function GameRoom() {
+  const { roomState, isDrawer, chosenWordReveal, hints, category, wordLength, timeLeft, leaveRoom } = useSocket();
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="game-container">
+      {/* Modals & Overlays based on state */}
+      {roomState?.state === "GAME_OVER" && <GameOverModal />}
+      {roomState?.state === "WORD_SELECTION" && <WordSelectionModal />}
+      {roomState?.state === "ROUND_END" && <RoundEndModal />}
 
-      <div className="ticks"></div>
+      {/* Left Column: Player Scoreboard Sidebar */}
+      <LeaderboardSidebar />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {/* Center Column: Game HUD, Canvas Drawing board, Toolbar */}
+      <main className="game-play-area">
+        <div className="game-hud glass-panel">
+          <div className="hud-info">
+            <div className={`hud-timer ${timeLeft <= 10 && roomState?.state === "DRAWING" ? "hurry" : ""}`}>
+              {timeLeft}
+            </div>
+            <div className="hud-word-display">
+              <div className="hud-masked-word">
+                {isDrawer ? chosenWordReveal : hints}
+              </div>
+              <div className="hud-word-hint">
+                {category && <span>Category: <strong>{category}</strong> | </span>}
+                <span>Word Length: <strong>{wordLength} letters</strong></span>
+              </div>
+            </div>
+          </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <span className="stat-pill">
+              Rounds: {roomState?.currentRound} / {roomState?.settings?.rounds}
+            </span>
+            <button
+              type="button"
+              className="glow-btn glow-btn-secondary"
+              style={{ padding: "6px 12px", fontSize: "12px", height: "32px", display: "inline-flex", alignItems: "center" }}
+              onClick={leaveRoom}
+            >
+              Leave Room 🚪
+            </button>
+          </div>
+        </div>
+
+        {/* Scaled Canvas Board and drawing tools */}
+        <CanvasBoard />
+      </main>
+
+      {/* Right Column: Chat logging stream and guess submission forms */}
+      <ChatPanel />
+    </div>
+  );
 }
 
-export default App
+function AppContent() {
+  const { screen, errorMsg } = useSocket();
+
+  return (
+    <div className="App">
+      {errorMsg && (
+        <div
+          className="glass-panel"
+          style={{
+            margin: "16px auto",
+            maxWidth: "600px",
+            padding: "12px",
+            borderLeft: "4px solid var(--color-error)",
+            background: "rgba(239, 68, 68, 0.1)"
+          }}
+        >
+          <p style={{ color: "var(--color-error)", fontWeight: 600 }}>⚠️ {errorMsg}</p>
+        </div>
+      )}
+
+      {screen === "LOBBY_SELECT" && <LobbySelect />}
+      {screen === "WAITING_LOBBY" && <WaitingLobby />}
+      {screen === "GAME_PLAY" && <GameRoom />}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <SocketProvider>
+      <div className="bg-orb orb-1"></div>
+      <div className="bg-orb orb-2"></div>
+      <AppContent />
+    </SocketProvider>
+  );
+}
