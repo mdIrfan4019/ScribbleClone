@@ -1018,6 +1018,10 @@ class Room {
 
             playerCount: this.players.size,
             wordChosen: this.wordChosen,
+            currentWord: this.currentWord ? {
+                category: this.currentWord.category,
+                length: this.currentWord.word.length
+            } : null,
 
             currentHint: this.currentHint,
             roundStartTime: this.roundStartTime,

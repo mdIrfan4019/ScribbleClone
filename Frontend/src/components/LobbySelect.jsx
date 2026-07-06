@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSocket } from "../context/SocketContext";
 
 export default function LobbySelect() {
@@ -23,6 +23,15 @@ export default function LobbySelect() {
   const [wordMode, setWordMode] = useState("NORMAL");
   const [lobbyType, setLobbyType] = useState("PRIVATE");
 
+  const [loadingType, setLoadingType] = useState(null); // 'spawn', 'enter', 'quickplay', or null
+
+  // Reset loading indicators if the server returns a joining/spawning error
+  useEffect(() => {
+    if (errorMsg) {
+      setLoadingType(null);
+    }
+  }, [errorMsg]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!localUsername || localUsername.trim() === "") {
@@ -30,6 +39,7 @@ export default function LobbySelect() {
       return;
     }
     setErrorMsg("");
+    setLoadingType(tab === "join" ? "enter" : "spawn");
     
     // Calls context function which handles connecting and emitting create/join events
     connectAndAction(
@@ -51,6 +61,7 @@ export default function LobbySelect() {
       return;
     }
     setErrorMsg("");
+    setLoadingType("quickplay");
     joinPublicRoom(localUsername.trim());
   };
 
@@ -198,16 +209,16 @@ export default function LobbySelect() {
 
             {tab === "join" ? (
               <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
-                <button type="submit" className="glow-btn" style={{ flex: 1 }}>
-                  Enter Arena 🚀
+                <button type="submit" className="glow-btn" style={{ flex: 1 }} disabled={loadingType !== null}>
+                  {loadingType === "enter" ? "Entering Arena..." : "Enter Arena 🚀"}
                 </button>
-                <button type="button" className="glow-btn glow-btn-secondary" style={{ flex: 1 }} onClick={handleQuickPlay}>
-                  Quick Play 🎮
+                <button type="button" className="glow-btn glow-btn-secondary" style={{ flex: 1 }} onClick={handleQuickPlay} disabled={loadingType !== null}>
+                  {loadingType === "quickplay" ? "Matching..." : "Quick Play 🎮"}
                 </button>
               </div>
             ) : (
-              <button type="submit" className="glow-btn" style={{ marginTop: "8px", width: "100%" }}>
-                Spawn Room ⚡
+              <button type="submit" className="glow-btn" style={{ marginTop: "8px", width: "100%" }} disabled={loadingType !== null}>
+                {loadingType === "spawn" ? "Spawning Room..." : "Spawn Room ⚡"}
               </button>
             )}
           </form>

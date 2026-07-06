@@ -75,7 +75,18 @@ export function SocketProvider({ children }) {
       setRoomState(room);
       setPlayers(room.players);
       setIsHost(room.host === playerId);
-      setScreen("WAITING_LOBBY");
+      
+      if (room.state === "LOBBY") {
+        setScreen("WAITING_LOBBY");
+      } else {
+        setScreen("GAME_PLAY");
+        setIsDrawer(room.currentDrawer === playerId);
+        setHints(room.currentHint || "");
+        setCategory(room.currentWord?.category || "");
+        setWordLength(room.currentWord?.length || 0);
+        setTimeLeft(room.remainingTime || 0);
+      }
+
       setErrorMsg("");
       window.history.pushState({}, "", `?room=${roomId}`);
     });
@@ -267,6 +278,9 @@ export function SocketProvider({ children }) {
     setChatMessages([]);
     setHasGuessedCorrectly(false);
     setScreen("LOBBY_SELECT");
+    
+    // Clear room query parameter from the URL address bar on exit
+    window.history.pushState({}, "", window.location.pathname);
   };
 
   const toggleReady = () => {
