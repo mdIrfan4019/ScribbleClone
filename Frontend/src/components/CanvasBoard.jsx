@@ -45,9 +45,6 @@ export default function CanvasBoard() {
           onMouseMove={drawMove}
           onMouseUp={endDrawing}
           onMouseLeave={endDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={drawMove}
-          onTouchEnd={endDrawing}
         />
       </div>
 

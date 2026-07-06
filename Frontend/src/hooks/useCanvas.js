@@ -124,6 +124,43 @@ export function useCanvas(isDrawer, gameState) {
     }
   }, [gameState]);
 
+  // Prevent mobile scroll/refresh gestures while drawing via passive: false listeners
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleTouchStart = (e) => {
+      if (isDrawer && gameState === "DRAWING") {
+        e.preventDefault();
+        startDrawing(e);
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (isDrawer && isDrawingLocal.current && gameState === "DRAWING") {
+        e.preventDefault();
+        drawMove(e);
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      if (isDrawer && isDrawingLocal.current) {
+        e.preventDefault();
+        endDrawing(e);
+      }
+    };
+
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+    canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+
+    return () => {
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isDrawer, gameState]);
+
   // Bind server socket drawing listeners
   useEffect(() => {
     const handleDrawStartServer = ({ x, y, color, size, tool }) => {

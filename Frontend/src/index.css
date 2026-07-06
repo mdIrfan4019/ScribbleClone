@@ -701,6 +701,7 @@ body {
   height: 100%;
   cursor: crosshair;
   background: #ffffff;
+  touch-action: none;
 }
 
 .canvas-toolbar {
