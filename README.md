@@ -1,91 +1,213 @@
-# ScribbleClone - Multiplayer skribbl.io Clone (MERN Stack Assignment)
+# ✍️ Doodle & Guess (skribbl.io Clone)
 
-ScribbleClone is a real-time multiplayer drawing and guessing game built with React, Node.js (Express), and Socket.IO.
-
----
-
-## 🚀 Quick Start (Local Setup)
-
-### 1. Start the Backend Server
-```bash
-cd Backend
-npm install
-npm start
-```
-*The server will run on `http://localhost:5000`.*
-
-### 2. Start the Frontend Client
-```bash
-cd Frontend
-npm install
-npm run dev
-```
-*The client will run on `http://localhost:5173` (or similar Vite port).*
+A high-performance, real-time, multiplayer drawing and guessing game built with **React**, **Node.js (Express)**, and **Socket.IO**. Designed from the ground up to demonstrate production-grade system architecture, strict Object-Oriented Programming (OOP) principles, scalable frontend structures, and responsive canvas scale-normalization.
 
 ---
 
-## 🛠️ Architecture Overview
+## 🚀 Live Links & Tech Stack
 
-The system is split into two layers communicating via real-time WebSocket events:
+* **Frontend Hosting (Vercel)**: `https://your-vercel-url.vercel.app` *(Replace with your actual Vercel link)*
+* **Backend API (Render)**: `https://your-render-url.onrender.com` *(Replace with your actual Render link)*
 
-```
-┌─────────────────────────────────┐                 ┌─────────────────────────────────┐
-│        React Frontend           │                 │         Express Backend         │
-├─────────────────────────────────┤                 ├─────────────────────────────────┤
-│ • HTML5 Canvas (Coord Mapping)  │ ◄─── WebSockets ──► • GameManager / Room OOP      │
-│ • State-based Screen Router     │     (Socket.IO) │ • Turn & Countdown Timer        │
-│ • Chat & Guessing feeds         │                 │ • Word choice selection logic   │
-└─────────────────────────────────┘                 └─────────────────────────────────┘
-```
-
-### Canvas Scaling & Mapped Coordinates (Gold Standard)
-To ensure drawings look identical across screens of different sizes (phones, laptops, monitors), we use a **resolution mapping system**:
-1. The canvas always renders internally at a fixed resolution of **800x500 pixels**.
-2. When a player draws, we calculate the coordinate percentage relative to their bounding client box width and height.
-3. We scale that percentage to the `800x500` space before emitting `draw_start` and `draw_move`.
-4. Other players receive the `800x500` coordinate and draw it on their canvases. The browser scales the visual canvas responsively via CSS rules.
+### Tech Stack
+* **Frontend**: React (ES6+ functional components) + Vite + Custom Hooks + CSS Grid/Flexbox
+* **Real-time Sync**: Socket.IO Client
+* **Backend**: Node.js + Express (ES Modules) + Socket.IO Server
+* **Architecture**: Strict OOP State Engine (Encapsulated classes: `Room`, `Player`, `Timer`, `WordManager`, `Canvas`, `GameManager`)
 
 ---
 
-## 🎓 Code Understanding (Interview Walkthrough Guide)
+## 🎨 System Design & Architecture
 
-Here are the key technical answers to prepare you for the recruiter's code walkthrough:
+The application is structured around a real-time event-driven client-server model, utilizing a robust Object-Oriented state registry on the backend and single-responsibility functional components on the client.
 
-### 1. How drawing strokes are captured, sent, and rendered across clients
-- **Capture**: The drawer's mouse/touch events triggers `onMouseDown`/`onTouchStart` on the `<canvas>` element. We calculate relative coordinates mapping to `800x500` coordinate space.
-- **Transmission**: The drawer emits `draw_start`, `draw_move`, and `draw_end` socket events containing the coordinate, color, tool (`brush`/`eraser`), and brush size.
-- **Rendering**: The socket server receives drawing events and broadcasts them to everyone in the room. Guessing clients listen for these events, push the points to a local `strokesHistory` array, and render the segment directly to their 2D canvas context.
-- **Undo / Clear**: When the drawer performs an undo or clears, the backend canvas updates and broadcasts `draw_undo` or `canvas_clear`. Guessing clients pop the last stroke from their local `strokesHistory` array and redraw all remaining strokes to ensure perfect synchronization.
+### 1. Game State Lifecycle Diagram
+The state transition engine guarantees automated round cycles, drawer rotations, selection countdowns, and cleanup flows:
 
-### 2. How game state (rounds, turn order, scoring) is managed
-- **State Machine**: The game progresses through states defined in `gameStates.js`: `LOBBY` ➔ `WORD_SELECTION` ➔ `DRAWING` ➔ `ROUND_END` ➔ `GAME_OVER`.
-- **OOP Encapsulation**: 
-  - `Room` class maintains state configurations, player mappings, and references to `Canvas` and `Timer`.
-  - `GameManager` aggregates active rooms in memory.
-  - `Timer` controls countdown ticks and executes custom callbacks (`onTick`, `onComplete`).
-- **Turn Order**: Rotates drawing players using an internal `drawerIndex` in the Room player list.
-- **Scoring**: Points are distributed on correct guesses inside `chatHandler.js` using tier constants:
-  - 1st correct guesser: 100 points
-  - 2nd: 80 points
-  - 3rd: 60 points
-  - Others: 50 points
-  - Drawer gets a 50-point bonus on the first correct guess.
+```mermaid
+stateDiagram-v2
+    [*] --> LOBBY : Room Created
+    LOBBY --> WORD_SELECTION : 2+ Players Ready / Host Starts
+    WORD_SELECTION --> DRAWING : Word Selected / 15s Selection Timeout
+    DRAWING --> ROUND_END : Timer Hits 0 / Everyone Guessed Correctly
+    ROUND_END --> WORD_SELECTION : Next Turn in Turn Queue
+    ROUND_END --> GAME_OVER : All Rounds Completed
+    GAME_OVER --> LOBBY : Host Resets Match
+    GAME_OVER --> [*] : Room Destroyed (Empty)
+```
 
-### 3. How WebSockets are used for real-time sync
-- WebSockets maintain an active, full-duplex TCP socket between the client and server.
-- The backend initializes `Socket.IO` on top of the HTTP server. It listens for actions (`create_room`, `join_room`, `choose_word`, `guess`, `chat_message`, `draw_start`, etc.).
-- When state transitions occur (e.g., word choice made, timer ticks, correct guess received), the server pushes the state downward to all players via `.to(roomId).emit(...)`.
+---
 
-### 4. Word-matching logic
-- **Clean Comparison**: We strip whitespace and ignore casing when comparing guesses inside `chatHandler.js`:
-  ```javascript
-  guessText = text.trim().toLowerCase();
-  correctWord = room.currentWord.word.trim().toLowerCase();
-  ```
-- **Levenshtein Check (Amber Warning)**: If the guess does not match, we run a Levenshtein distance check. If the edit distance is exactly `1` (one letter missing, inserted, or swapped), the server sends a private warning: *"'YourGuess' is very close!"*, encouraging them without spoiling the word for others.
-- **Spoiler Protection**: If a player guesses correctly, their chat box is locked out from other guessers. Their future chat messages are green and routed exclusively to the drawer and other correct guessers.
+### 2. Real-Time Synchronization Sequence Flow
+This diagram illustrates the WebSocket event loop when a drawer picks a word, starts sketch operations, and a guesser submits a correct answer:
 
-### 5. Deployment Setup & Constraints
-- **Platform**: Recommended setup is **Render** or **Railway**.
-- **Constraint (Websocket Support)**: Platforms like Vercel and Netlify use Serverless/Edge functions which terminate connection quickly and do not support persistent WebSockets/Socket.IO connections. 
-- **Solution**: The frontend can be hosted statically on Vercel/Netlify, but the backend Node/Socket server must be hosted on an application platform (like Render or Railway) that supports long-running stateful servers.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Drawer as Drawer (Client)
+    actor Guesser as Guesser (Client)
+    participant Server as Node.js Socket.IO Server
+    
+    Drawer->>Server: choose_word { word, roomId, playerId }
+    Note over Server: Start Round Timer & Hints Interval
+    Server-->>Drawer: round_start { isDrawer: true, wordOptions, drawTime }
+    Server-->>Guesser: round_start { isDrawer: false, category, wordLength }
+    
+    rect rgb(30, 20, 60)
+        Note over Drawer, Guesser: Canvas Drawing Synced Cycle
+        Drawer->>Server: draw_start { x, y, color, size }
+        Server-->>Guesser: draw_data { ...strokeData }
+        Drawer->>Server: draw_move { x, y }
+        Server-->>Guesser: draw_data { ...strokeData }
+        Drawer->>Server: draw_end
+    end
+    
+    Guesser->>Server: guess { text }
+    Note over Server: Check guess against secret word
+    Server-->>Guesser: guess_result { correct: true, points }
+    Server-->>Drawer: guess_result { correct: true, drawerPoints }
+    Server-->>Server: Check if everyone has guessed correctly
+    Server-->>Drawer: round_end { word, scores, nextDrawer }
+    Server-->>Guesser: round_end { word, scores, nextDrawer }
+```
+
+---
+
+### 3. Canvas Coordinate Scale Normalization (System Math)
+A major engineering challenge in online whiteboards is **device screen resolution differences**. If a player draws on a 1080p desktop screen and another player views it on a mobile device, the strokes will display offset or cut off unless scaled.
+
+#### The Solution:
+Our application implements a resolution-independent scaling grid.
+1. The drawing canvas coordinate space is mapped to a fixed logical coordinate system of **`800x500` pixels** on the server.
+2. When the drawer draws a line, client coordinates are mapped using the bounding rect offset ratio before sending them to the socket server:
+   $$\text{Normalized } X = \frac{\text{client } X - \text{rect.left}}{\text{rect.width}} \times 800$$
+   $$\text{Normalized } Y = \frac{\text{client } Y - \text{rect.top}}{\text{rect.height}} \times 500$$
+3. When the guesser receives coordinates from the server, they scale the line back to match their local screen aspect ratio:
+   $$\text{Render } X = \frac{\text{Normalized } X}{800} \times \text{local canvas width}$$
+   $$\text{Render } Y = \frac{\text{Normalized } Y}{500} \times \text{local canvas height}$$
+
+This guarantees that drawings are perfectly aligned, clean, and proportional on all screens, from huge monitors to smartphone displays.
+
+---
+
+## 🛠️ Object-Oriented Backend Engine
+
+The backend isolates game mechanics into dedicated classes rather than packing scripts into massive route handlers:
+
+* **`Player.js`**: Houses player socket references, score totals, ready states, drawer flags, and JSON converters.
+* **`Room.js`**: Coordinates the active lobby lifecycle, controls the active state transitions, triggers round rotations, and coordinates point awards using a time-decay algorithm.
+* **`Timer.js`**: A tick-based callback clock encapsulating `setInterval` loops to manage active gameplay countdowns.
+* **`WordManager.js`**: Fetches randomized words, splits them by category, handles spelling checkers, and maps the `usedWords` registry to avoid word repetition in a session.
+* **`Canvas.js`**: Holds active drawing history paths so players joining mid-round can receive current boards instantly.
+* **`GameManager.js`**: Centralized mapping table managing room insertions, exits, public matchmaking, and statistics monitors.
+
+---
+
+## 💻 Modular Frontend Organization
+
+We separated the monolithic codebase into structured React components and custom hooks:
+
+```
+Frontend/src/
+├── components/
+│   ├── Modals/
+│   │   ├── GameOverModal.jsx       # Champion podium crowned at end
+│   │   ├── RoundEndModal.jsx       # Reveals correct word + round scores
+│   │   └── WordSelectionModal.jsx  # Pulse-glow selection panel
+│   ├── CanvasBoard.jsx             # Canvas frame + Brush/Color/Eraser toolbar
+│   ├── ChatPanel.jsx               # Guesses list + messages input filter
+│   ├── LeaderboardSidebar.jsx      # Live player scoring ranks
+│   ├── LobbySelect.jsx             # skribbl.io home page + rules list
+│   └── WaitingLobby.jsx            # Ready up + configuration panel
+├── context/
+│   └── SocketContext.jsx           # Core WebSocket context layer & emitters
+├── hooks/
+│   └── useCanvas.js                # Custom whiteboard logic, scales & undoes
+├── App.jsx                         # Screen router (Lobby -> Waiting -> Game)
+└── index.css                       # Dark theme + ambient orbs keyframe styles
+```
+
+---
+
+## 🔗 Socket Events API Reference
+
+### Room & Matchmaking
+* `create_room` (Client ➡️ Server) | Payload: `{ hostName, settings: { maxPlayers, rounds, drawTime, type, wordMode } }`
+* `join_room` (Client ➡️ Server) | Payload: `{ roomId, playerName }`
+* `join_public_room` (Client ➡️ Server) | Payload: `{ playerName }` *(Finds active public room or spawns one)*
+* `room_created` (Server ➡️ Client) | Payload: `{ roomId, playerId, room }`
+* `room_joined` (Server ➡️ Client) | Payload: `{ roomId, playerId, room }`
+* `player_joined` (Server ➡️ Client) | Payload: `{ player, players }`
+* `leave_room` (Client ➡️ Server) | Resets context states on exit
+* `player_left` (Server ➡️ Client) | Payload: `{ playerId, players }`
+
+### Game Loop Events
+* `start_game` (Client ➡️ Server) | Initiates round 1 (Host/Auto-Matchmaker only)
+* `game_started` (Server ➡️ Client) | Transitions screen routers to `GAME_PLAY`
+* `round_start` (Server ➡️ Client) | Payload: `{ drawerId, wordOptions, room }` *(Starts word selection)*
+* `word_chosen` (Client ➡️ Server) | Payload: `{ word, roomId, playerId }` *(Starts draw clock)*
+* `round_end` (Server ➡️ Client) | Payload: `{ word, scores, nextDrawer }`
+* `game_over` (Server ➡️ Client) | Payload: `{ winner, leaderboard }`
+* `play_again` (Client ➡️ Server) | Payload: `{ roomId, playerId }` *(Resets room state for another match)*
+
+### Drawing Sync Events
+* `draw_start` (Client ➡️ Server) | Payload: `{ x, y, color, size }`
+* `draw_move` (Client ➡️ Server) | Payload: `{ x, y }`
+* `draw_end` (Client ➡️ Server)
+* `draw_data` (Server ➡️ Client) | Broadcasts drawing coordinates to guessers
+* `canvas_clear` (Client ➡️ Server) | Clears canvas for all connected players
+* `draw_undo` (Client ➡️ Server) | Pops last path and updates guessers' whiteboard
+
+### Chat & Guessing
+* `guess` (Client ➡️ Server) | Payload: `{ text }` *(Guess submission check)*
+* `guess_result` (Server ➡️ Client) | Payload: `{ correct: true/false, playerId, username, points }`
+* `chat` (Client ➡️ Server) | Payload: `{ text }` *(Sends standard messages)*
+* `chat_message` (Server ➡️ Client) | Broadcasts general message to chat panel
+
+---
+
+## ⚡ Local Setup & Execution
+
+### 1. Prerequisites
+Ensure you have **Node.js (v18+)** installed.
+
+### 2. Backend Server Setup
+1. Navigate to the backend directory:
+   ```bash
+   cd Backend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up environment variables. Create a `.env` file:
+   ```env
+   PORT=5000
+   ```
+4. Start the server:
+   ```bash
+   npm start
+   ```
+   *Server will run at `http://localhost:5000`.*
+
+### 3. Frontend Client Setup
+1. Open a new terminal and navigate to the frontend directory:
+   ```bash
+   cd Frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the Vite dev server:
+   ```bash
+   npm run dev
+   ```
+   *Client will open at `http://localhost:5173`.*
+
+---
+
+## 🛡️ Global Exception Handling & Stability
+The backend server contains global error event guards configured directly in the process scope:
+* **`uncaughtException`**: Catches runtime errors (e.g. database disconnects) to prevent the server process from crashing.
+* **`unhandledRejection`**: Intercepts failed asynchronous Promise calls, logging error stack traces without disrupting active room game loops.
